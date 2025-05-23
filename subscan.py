@@ -15,7 +15,7 @@ parser.add_argument("-o", "--outfile", help="output file name")
 parser.add_argument("-w", "--wordlist", help="wordlist for brute-forcing subdomains")
 parser.add_argument("--brute", help="brute mode", action="store_true")
 parser.add_argument("--print", help="print mode", action="store_true")
-parser.add_argument("--recurse", help="recurse mode", action="store_true")
+parser.add_argument("--depth", type=int, default=0, help="set recurse of depth mode (default: 0)")
 parser.add_argument("--threads", type=int, default=10, help="set maximum number of worker threads (default: 10)")
 parser.add_argument("--delay", type=int, default=1, help="set delay (seconds) between crt.sh queries (default: 1)")
 parser.add_argument("--timeout", type=int, default=20, help="set HTTP request timeout to crt.sh in seconds (default: 20)")
@@ -81,7 +81,7 @@ def getSubdomainFromCrt(domain):
     return sorted(names)
 
 
-def getSubdomainFromBruteForcing(wordlist, domains):
+def getSubdomainFromBruteForcing(wordlist, domains, depth):
     candidates = [f"{w}.{d}" for d in domains for w in wordlist]
     total = len(candidates)
     found = []
@@ -89,7 +89,8 @@ def getSubdomainFromBruteForcing(wordlist, domains):
     print(f"""
             
 ────────────────────────────────────────────────────────────────────────────────────────
-    [*] Starting brute-forcing {total} candidates using {args.threads} threads
+    [*] Starting brute-forcing {total} candidates using {args.threads} threads 
+    [*] Current trying depth : {depth + 1}
 ────────────────────────────────────────────────────────────────────────────────────────
             
     """)
@@ -121,14 +122,17 @@ def checkOptions():
         print("[-] Please specify either '-o' to save results or '--print' to display them.")
         exit()
     if not args.brute:
-        if args.recurse:
-            print("[-] '--recurse' can only be used with '--brute'.")
+        if args.depth:
+            print("[-] '--depth' can only be used with '--brute'.")
             exit()
         elif args.wordlist:
             print("[-] '--wordlist' can only be used with '--brute'.")
             exit()               
     if args.brute and not args.wordlist:
         print("[-] Brute-force mode requires specifying '-w/--wordlist'.")
+        exit()
+    if args.depth > 0 and not args.brute:
+        print("[-] '--depth' requires '--brute'.")
         exit()
 
 def getDomains(path):
@@ -163,6 +167,8 @@ def putResults(domains, awsPrifixes, gcpPrifixes):
     for dom in domains:
         ip    = convertDomainToAddress(dom)
         cloud = checkIsCloud(ip, awsPrifixes, gcpPrifixes)
+        if cloud == "Unresolved":
+            continue
         rows.append({
             "도메인": dom,
             "IP":      ip or " ",
@@ -193,6 +199,23 @@ def printFooter():
           
 """)
 
+def recurseMode(domains, depth):
+    subs = domains[:]  
+
+    for curDepth in range(depth):
+        print(f"\n[Depth {curDepth+1}] Brute-forcing on {len(subs)} domains…")
+        brute_results = getSubdomainFromBruteForcing(loadWordlist(args.wordlist),subs, curDepth)
+        new = [sub for sub, ips in brute_results if sub not in subs]
+        if not new:
+            break
+
+        for _ in new:
+            print(f"  - {_}")
+        subs += new
+
+    return subs
+
+
 def main():
     printBanner()
     checkOptions()
@@ -217,19 +240,19 @@ def main():
     all_subs = list(dict.fromkeys(all_subs))
 
     if args.brute:
-        if not args.recurse:
-            bruted = getSubdomainFromBruteForcing(loadWordlist(args.wordlist), base)
-            all_subs = list(dict.fromkeys(all_subs + [s for s, _ in bruted]))
-        
-        elif args.recurse:
-            bruted2 = getSubdomainFromBruteForcing(loadWordlist(args.wordlist), all_subs)
-            all_subs = list(dict.fromkeys(all_subs + [s for s, _ in bruted2]))
+        if args.depth == 0:
+            bruted = getSubdomainFromBruteForcing(loadWordlist(args.wordlist), all_subs)
+            all_subs += [s for s, _ in bruted]
+        else:
+            all_subs = recurseMode(all_subs, args.depth)
 
+    all_subs = list(dict.fromkeys(all_subs))
     aws_pref, gcp_pref = getCloudPrefixes()
     printFooter()
     putResults(all_subs, aws_pref, gcp_pref)
 
     print("[+] Done.")
+
 
 if __name__ == "__main__":
     main()
