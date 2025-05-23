@@ -241,7 +241,7 @@ def main():
 
     if args.brute:
         if args.depth == 0:
-            bruted = getSubdomainFromBruteForcing(loadWordlist(args.wordlist), all_subs)
+            bruted = getSubdomainFromBruteForcing(loadWordlist(args.wordlist), all_subs, args.depth)
             all_subs += [s for s, _ in bruted]
         else:
             all_subs = recurseMode(all_subs, args.depth)
