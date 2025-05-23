@@ -90,7 +90,7 @@ def getSubdomainFromBruteForcing(wordlist, domains, depth):
             
 ────────────────────────────────────────────────────────────────────────────────────────
     [*] Starting brute-forcing {total} candidates using {args.threads} threads 
-    [*] Current trying depth : {depth + 1}
+    [*] Current trying depth : {depth}
 ────────────────────────────────────────────────────────────────────────────────────────
             
     """)
@@ -201,19 +201,18 @@ def printFooter():
 
 def recurseMode(domains, depth):
     subs = domains[:]  
-
     for curDepth in range(depth):
-        print(f"\n[Depth {curDepth+1}] Brute-forcing on {len(subs)} domains…")
-        brute_results = getSubdomainFromBruteForcing(loadWordlist(args.wordlist),subs, curDepth)
+        brute_results = getSubdomainFromBruteForcing(loadWordlist(args.wordlist), subs, curDepth+1)
         new = [sub for sub, ips in brute_results if sub not in subs]
         if not new:
+            print(f"[-] There is no new subdomain on Depth {curDepth+1}. Working breaked")
             break
 
-        for _ in new:
-            print(f"  - {_}")
-        subs += new
-
+        for sub in new:
+            subs.append(sub)
+            print(f'  - {sub}')
     return subs
+
 
 
 def main():
@@ -240,11 +239,11 @@ def main():
     all_subs = list(dict.fromkeys(all_subs))
 
     if args.brute:
-        if args.depth == 0:
-            bruted = getSubdomainFromBruteForcing(loadWordlist(args.wordlist), all_subs, args.depth)
+        if args.depth <= 1:
+            bruted = getSubdomainFromBruteForcing(loadWordlist(args.wordlist), base, args.depth)
             all_subs += [s for s, _ in bruted]
         else:
-            all_subs = recurseMode(all_subs, args.depth)
+            all_subs = recurseMode(base, args.depth)
 
     all_subs = list(dict.fromkeys(all_subs))
     aws_pref, gcp_pref = getCloudPrefixes()
