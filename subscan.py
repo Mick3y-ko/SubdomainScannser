@@ -8,7 +8,7 @@ import pandas as pd
 import dns.resolver
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-parser = argparse.ArgumentParser(description="find Subdomain and get IP Address v0.3", epilog="")
+parser = argparse.ArgumentParser(description="find Subdomain and get IP Address v0.3")
 parser.add_argument("-f", "--file", help="domain list file")
 parser.add_argument("-d", "--domain", help="single domain")
 parser.add_argument("-o", "--outfile", help="output file name")
@@ -22,6 +22,20 @@ parser.add_argument("--timeout", type=int, default=20, help="set HTTP request ti
 parser.add_argument("--dns-timeout", type=int, default=5, help="set DNS query timeout in seconds (default: 5)")
 
 args = parser.parse_args()
+
+def printBanner():
+    print("""
+ _____         _                              
+/  ___|       | |                             
+\ `--.  _   _ | |__   ___   ___   __ _  _ __  
+ `--. \| | | || '_ \ / __| / __| / _` || '_ \ 
+/\__/ /| |_| || |_) |\__ \| (__ | (_| || | | |
+\____/  \__,_||_.__/ |___/ \___| \__,_||_| |_|
+                                              
+    Subdomain & IP Address scanner v0.3
+    Copyright 2025. Mick3y                                
+
+""")
 
 def resolveSubdomain(subdomain, timeout):
     try:
@@ -180,6 +194,7 @@ def printFooter():
 """)
 
 def main():
+    printBanner()
     checkOptions()
 
     if args.domain:
