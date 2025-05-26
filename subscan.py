@@ -32,7 +32,7 @@ def printBanner():
 /\__/ /| |_| || |_) |\__ \| (__ | (_| || | | |
 \____/  \__,_||_.__/ |___/ \___| \__,_||_| |_|
                                               
-    Subdomain & IP Address scanner v0.3
+    Subdomain & IP Address scanner v0.4
     Copyright 2025. Mick3y                                
 
 """)
@@ -200,18 +200,24 @@ def printFooter():
 """)
 
 def recurseMode(domains, depth):
-    subs = domains[:]  
-    for curDepth in range(depth):
-        brute_results = getSubdomainFromBruteForcing(loadWordlist(args.wordlist), subs, curDepth+1)
-        new = [sub for sub, ips in brute_results if sub not in subs]
+    all_subs = list(domains) 
+    prev_level = list(domains)
+
+    for curDepth in range(1, depth+1):
+        brute_results = getSubdomainFromBruteForcing(loadWordlist(args.wordlist),
+                                                    prev_level, curDepth)
+        new = [sub for sub, ips in brute_results if sub not in all_subs]
         if not new:
             print(f"[-] There is no new subdomain on Depth {curDepth+1}. Working breaked")
             break
 
         for sub in new:
-            subs.append(sub)
-            print(f'  - {sub}')
-    return subs
+            print(f"  - {sub}")
+            all_subs.append(sub)
+        prev_level = new
+
+    return all_subs
+
 
 
 
